@@ -4,7 +4,7 @@ Aplicación de quiz sobre países del mundo desarrollada como parte de la activi
 
 ## Stack
 
-- **React 18** + **TypeScript**
+- **React ** + **TypeScript**
 - **React Router v6** — enrutamiento completo (/, /quiz, /result)
 - **Tailwind CSS** — estilos responsivos y dark mode nativo
 - **Vitest** + **Testing Library** — 4 pruebas unitarias
