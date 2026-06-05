@@ -9,15 +9,18 @@ import OptionButton from '../components/OptionButton'
 import ProgressDots from '../components/ProgressDots'
 import DarkModeToggle from '../components/DarkModeToggle'
 
-// Lista de URLs a intentar en orden:
-// 1. Proxy local de Vite (evita CORS en desarrollo)
-// 2. URL directa con fields
-// 3. URL directa sin fields
-const API_URLS = [
-  '/api/countries?fields=name,capital,flags,population,cca2,region',
-  'https://restcountries.com/v3.1/all?fields=name,capital,flags,population,cca2,region',
-  'https://restcountries.com/v3.1/all',
-]
+// En desarrollo: primero el proxy de Vite (/api/countries) para evitar CORS
+// En producción (Netlify): el proxy no existe, cae al segundo o tercer URL
+const API_URLS = import.meta.env.DEV
+  ? [
+      '/api/countries?fields=name,capital,flags,population,cca2,region',
+      'https://restcountries.com/v3.1/all?fields=name,capital,flags,population,cca2,region',
+      'https://restcountries.com/v3.1/all',
+    ]
+  : [
+      'https://restcountries.com/v3.1/all?fields=name,capital,flags,population,cca2,region',
+      'https://restcountries.com/v3.1/all',
+    ]
 
 async function fetchCountriesWithFallback(): Promise<Country[]> {
   let lastError: Error = new Error('No se pudo conectar a la API')
@@ -26,18 +29,14 @@ async function fetchCountriesWithFallback(): Promise<Country[]> {
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 10000)
-
       const res = await fetch(url, { signal: controller.signal })
       clearTimeout(timeout)
-
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
       const data = await res.json()
       if (Array.isArray(data) && data.length > 0) return data as Country[]
       throw new Error('Respuesta vacía')
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err))
-      // Continuar al siguiente URL del fallback
     }
   }
 
@@ -82,9 +81,7 @@ export default function Quiz() {
       setCurrent(0)
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Error desconocido al cargar los países',
+        err instanceof Error ? err.message : 'Error desconocido al cargar los países',
       )
     } finally {
       setLoading(false)
@@ -127,7 +124,7 @@ export default function Quiz() {
     navigate('/result', { state: { score, answers, questions } })
   }
 
-  // Estado: Cargando 
+  // ── Cargando ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
@@ -144,7 +141,7 @@ export default function Quiz() {
     )
   }
 
-  //  Estado: Error
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
@@ -177,7 +174,7 @@ export default function Quiz() {
 
   if (questions.length === 0) return null
 
-  //  Quiz activo
+  // ── Quiz activo ───────────────────────────────────────────────────────────
   const q = questions[current]
   const answerStates = answers.map(
     (a) => a?.state ?? 'unanswered',
@@ -200,24 +197,17 @@ export default function Quiz() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 md:p-8 max-w-lg w-full">
-        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-bold text-gray-700 dark:text-gray-200 text-sm">
             Pregunta {current + 1} de {questions.length}
           </h2>
           <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            {q.type === 'capital'
-              ? '🏙 Capital'
-              : q.type === 'flag'
-                ? '🚩 Bandera'
-                : '👥 Población'}
+            {q.type === 'capital' ? '🏙 Capital' : q.type === 'flag' ? '🚩 Bandera' : '👥 Población'}
           </span>
         </div>
 
-        {/* Timer */}
         <TimerBar timeLeft={timeLeft} />
 
-        {/* Dots de progreso */}
         <ProgressDots
           total={questions.length}
           current={current}
@@ -225,7 +215,6 @@ export default function Quiz() {
           onNavigate={handleNavigate}
         />
 
-        {/* Bandera si aplica */}
         {q.flagUrl && (
           <div className="flex justify-center my-4">
             <img
@@ -236,12 +225,10 @@ export default function Quiz() {
           </div>
         )}
 
-        {/* Pregunta */}
         <p className="text-gray-800 dark:text-white font-semibold text-base md:text-lg mb-4 text-center">
           {q.questionText}
         </p>
 
-        {/* Opciones */}
         <div className="grid gap-3">
           {q.options.map((opt) => (
             <OptionButton
@@ -253,16 +240,12 @@ export default function Quiz() {
           ))}
         </div>
 
-        {/* Botón siguiente */}
         {answered && (
           <button
             onClick={handleNext}
-            className="mt-6 w-full py-3 bg-primary text-white font-semibold rounded-xl
-              hover:bg-indigo-600 active:scale-95 transition-all duration-200"
+            className="mt-6 w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-indigo-600 active:scale-95 transition-all duration-200"
           >
-            {allAnswered || current === questions.length - 1
-              ? '🏁 Ver resultados'
-              : 'Siguiente →'}
+            {allAnswered || current === questions.length - 1 ? '🏁 Ver resultados' : 'Siguiente →'}
           </button>
         )}
       </div>
